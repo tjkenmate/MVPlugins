@@ -15,8 +15,8 @@
  * @param Default Move Speed
  * @desc The Default Movment Speed of the party before modifiers
  * (4 is the default speed of the system)
- * Default: 4 
- * @default 4
+ * Default: 20 
+ * @default 20
  */
 
 var Imported = Imported || {};
@@ -33,9 +33,9 @@ TjKenMate.Param = TjKenMate.Param || {};
 TjKenMate.Param.DisableAlwaysDashOption = Boolean(TjKenMate.Parameters['Disable AlwaysDash']);
 TjKenMate.Param.DashOverhaul = TjKenMate.Param.DashOverhaul || {};
 TjKenMate.Param.DashOverhaul.DefaultSettings = TjKenMate.DashOverhaul.DefaultSettings || {};
-Tjkenmate.Param.DashOverhaul.DefaultSettings.defaultMoveSpeed = Number(TjKenMate.Parameters['Default Move Speed'] || 4);
+TjKenMate.Param.DashOverhaul.DefaultSettings.defaultMoveSpeed = Number(TjKenMate.Parameters['Default Move Speed'] || 4);
 
-var _Tj_DashOverhaul_Game_CharacterBase_initMembers = Game_CharacterBase.prototype.initMembers;
+var _Tj_Dash_Game_CharacterBase_initMembers = Game_CharacterBase.prototype.initMembers;
 Game_CharacterBase.prototype.initMembers = function() {
     _Tj_DashOverhaul_Game_CharacterBase_initMembers.call(this);
     this.setMoveSpeed(TjKenMate.Param.DashOverhaul.DefaultSettings.defaultMoveSpeed);
@@ -58,7 +58,7 @@ var _Tj_DashOverhaul_is_Dash_Button_Pressed = Game_Player.prototype.isDashButton
 Game_Player.prototype.isDashButtonPressed = function() {
     if(TjDashStamina == 0)
         return false;
-    else{
+    else if(Input.isPressed('shift')) {
         TjDashStamina--;
         console.log(TjDashStamina);
     }
