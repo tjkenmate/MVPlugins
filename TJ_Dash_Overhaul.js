@@ -31,13 +31,13 @@ TjKenMate.Parameters = PluginManager.parameters('TJ_Dash_Overhaul');
 TjKenMate.Param = TjKenMate.Param || {};
 
 TjKenMate.Param.DisableAlwaysDashOption = Boolean(TjKenMate.Parameters['Disable AlwaysDash']);
-TjKenMate.Param.DashOverhaul = TjKenMate.Param.DashOverhaul || {};
+//TjKenMate.Param.DashOverhaul = TjKenMate.Param.DashOverhaul || {};
 TjKenMate.Param.DashOverhaul.DefaultSettings = TjKenMate.DashOverhaul.DefaultSettings || {};
 TjKenMate.Param.DashOverhaul.DefaultSettings.defaultMoveSpeed = Number(TjKenMate.Parameters['Default Move Speed'] || 4);
 
 var _Tj_Dash_Game_CharacterBase_initMembers = Game_CharacterBase.prototype.initMembers;
 Game_CharacterBase.prototype.initMembers = function() {
-    _Tj_DashOverhaul_Game_CharacterBase_initMembers.call(this);
+    _Tj_Dash_Game_CharacterBase_initMembers.call(this);
     this.setMoveSpeed(TjKenMate.Param.DashOverhaul.DefaultSettings.defaultMoveSpeed);
 };
 
