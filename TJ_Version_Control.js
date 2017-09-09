@@ -25,7 +25,7 @@
  * @default 0
  * 
  * @param Window Text
- * @desc The Text To Display in the Version window. Key Codes : \n New line %M Major %m Minor %R Release %b build
+ * @desc The Text To Display in the Version window. Key Codes : %n New line %M Major %m Minor %R Release %b build
  * Default: %M.%m.$b
  * @default %M.%m.$b
  * 
@@ -177,7 +177,8 @@ function processString() {
     var replacedMinor = replacedMajor.replace("%m", String(TjKenMate.Param.VersionControl.minorver));
     var replacedRelease = replacedMinor.replace("%R", String(TjKenMate.Param.VersionControl.releasever));
     var replacedBuild = replacedRelease.replace("$b", String(Tj_BuildNumber));
-    return replacedBuild;
+    var replaceNewLine = replacedBuild.replace("%n", "\n");
+    return replaceNewLine;
 }
 
 function addTitleScreenVersion() {
