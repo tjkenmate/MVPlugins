@@ -1,6 +1,6 @@
 /*:
  * @plugindesc
- * [v0.1b] Simple Verison Control plugin. Track your versions!
+ * [v1.0b] Simple Verison Control plugin. Track your Builds, Backup Your Database!
  * 
  * @author TJ (TjKenMate)
  *
@@ -58,18 +58,33 @@
  * 
  * @param Box Width
  * @desc The width of the box
- * Default: 100
- * @default 100
+ * Default: 150
+ * @default 150
  * 
  * @param Box Hight
  * @desc The hight of the box
- * Default: 50
- * @default 50
+ * Default: 100
+ * @default 100
  * 
  * @param Text Width
  * @desc Text Width in the box
  * Default: 28
  * @default 28
+ * 
+ * @param ~~ Backup ~~
+ * @desc Backup Settings
+ * Default: 
+ * @default 
+ * 
+ * @param Version Change to Backup
+ * @desc A Space Seperated array of Version Changes to back up. See Help
+ * Default: Major Minor Release
+ * @default Major Minor Release
+ *
+ * @param Data To Backup
+ * @desc A Space Seperated array of Jsons in /data/ to back up. use all to backup default data files. DO NOT INCLUDE THE .JSON. See Help
+ * Default: all
+ * @default all
  */
 
  //CodeCoexistance Stuff
@@ -97,11 +112,64 @@ TjKenMate.Param.VersionControl.yw = Number(TjKenMate.Parameters['y']);
 TjKenMate.Param.VersionControl.ww = Number(TjKenMate.Parameters['Box Width']);
 TjKenMate.Param.VersionControl.hw = Number(TjKenMate.Parameters['Box Hight']);
 TjKenMate.Param.VersionControl.wt = Number(TjKenMate.Parameters['Text Width']);
+TjKenMate.Param.VersionControl.restoreBackUp = eval(TjKenMate.Parameters['Restore Backup']) || false;
+TjKenMate.Param.VersionControl.backupSettings = createTjBackupConfig(String(TjKenMate.Parameters['Version Change to Backup']).split(" "))
+TjKenMate.Param.VersionControl.dataToBackup = String(TjKenMate.Parameters['Data To Backup']).split(" ") || [];
 
 var Tj_BuildNumber = 0;
+var Tj_MajorVersionChange = false;
+var Tj_MinorVersionChange = false;
+var Tj_ReleaseVersionChange = false;
+global._Tj_JsonData = [];
+global._Tj_JsonDataCounter = 0;
+global._Tj_ShouldBackup = TjKenMate.Param.VersionControl.restoreBackUp;
+
+function createTjBackupConfig(array) {
+    var major = false;
+    var minor = false;
+    var build = false;
+    var release = false
+    for(var i = 0; i < array.length; i++) {
+        if(array[i].toLowerCase() === "major")
+            major = true;
+        if(array[i].toLowerCase() === "minor")
+            minor = true;
+        if(array[i].toLowerCase() === "build")
+            build = true;
+        if(array[i].toLowerCase() === "release")
+            release = true;
+    }
+	var config = {
+        ma: major,
+        mi: minor,
+        r: release,
+        b: build
+    };
+	return config;
+}
+
+global.tj_damn_parseTjData = function(data) {
+    jsonObject = data;
+    //console.log(jsonObject);
+    //console.log("I am called");
+    global._Tj_JsonData[global._Tj_JsonDataCounter] = jsonObject;
+    //console.log(global._Tj_JsonData[global._Tj_JsonDataCounter]);
+    global._Tj_JsonDataCounter = global._Tj_JsonDataCounter + 1;
+    writeBackup(false);
+}
+
+global.tj_damn_parseTjDataRestore = function(data) {
+    jsonObject = data;
+    //console.log(jsonObject);
+    //console.log("I am called");
+    global._Tj_JsonData[global._Tj_JsonDataCounter] = jsonObject;
+    //console.log(global._Tj_JsonData[global._Tj_JsonDataCounter]);
+    global._Tj_JsonDataCounter = global._Tj_JsonDataCounter + 1;
+    writeBackup(true);
+}
 
 function writeVersion() {
-    var path = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/data/');
+    var path = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/tjken/versioncontrol/');
     if (path.match(/^\/([A-Z]\:)/)) {
           path = path.slice(1);
     }
@@ -119,7 +187,7 @@ function writeVersion() {
 }
 
 function writeInital() {
-    var path = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/data/');
+    var path = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/tjken/versioncontrol/');
     if (path.match(/^\/([A-Z]\:)/)) {
           path = path.slice(1);
     }
@@ -138,7 +206,7 @@ function writeInital() {
 
 function getBuildNumber() {
     var xhr = new XMLHttpRequest();
-    xhr.open("GET","data/buildNumber.txt",false);
+    xhr.open("GET","tjken/versioncontrol/buildNumber.txt",false);
     try {
         xhr.send(null);
     }
@@ -147,8 +215,8 @@ function getBuildNumber() {
     } 
     var fileContent = xhr.responseText;
     var array = fileContent.split(" ");
-    for(i = 0; i < 4; i++)
-        console.log(array[i]);
+    //for(i = 0; i < 4; i++)
+        //console.log(array[i]);
     if(shouldResetBuildNumber(array)) {
         return 0;
     } else {
@@ -160,12 +228,18 @@ function getBuildNumber() {
 
 function shouldResetBuildNumber(array) {
      if(array[0] != null){
-         if(Number(array[0]) != TjKenMate.Param.VersionControl.majorver)
+         if(Number(array[0]) != TjKenMate.Param.VersionControl.majorver){
+            Tj_MajorVersionChange = true;
             return true;
-         if(Number(array[1]) != TjKenMate.Param.VersionControl.minorver)
+         }
+         if(Number(array[1]) != TjKenMate.Param.VersionControl.minorver) {
+            Tj_MinorVersionChange = true;
             return true;
-         if(Number(array[2]) != TjKenMate.Param.VersionControl.releasever)
+         }
+         if(Number(array[2]) != TjKenMate.Param.VersionControl.releasever){
+            Tj_ReleaseVersionChange = true;
             return true;
+         }
          return false;
      }
      return true;
@@ -185,13 +259,142 @@ function addTitleScreenVersion() {
     
 }
 
+function backUp(fileName) {
+    var pathIn = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/data/');
+    if (pathIn.match(/^\/([A-Z]\:)/)) {
+        pathIn = pathIn.slice(1);
+    }
+    var initArray = TjKenMate.Param.VersionControl.dataToBackup;
+    if(String(initArray[0]).toLowerCase() === "all")
+        initArray = ["Actors", "Animations", "Armors", "Classes", "CommonEvents", "DataEX",
+                     "Enemies", "Items", "Notes", "Skills", "States", "System", "Tilesets", "Troops",
+                     "Weapons", "Windows"];
+    pathIn = decodeURIComponent(pathIn) + String(initArray[fileName] + ".json");
+    //console.log(fileName);
+
+    var fs = require('fs');
+    fs.readFile(pathIn, 'utf8', function parseData(err, data) {
+        if (err){
+            console.log(err);
+        } else {
+        obj = JSON.parse(data); //now it an object
+        json = JSON.stringify(obj); //convert it back to json
+        global.tj_damn_parseTjData(json);
+    }});
+}
+
+
+function restoreBackUp(fileName) {
+    var pathIn = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/tjken/versioncontrol/');
+    if (pathIn.match(/^\/([A-Z]\:)/)) {
+        pathIn = pathIn.slice(1);
+    }
+    var initArray = TjKenMate.Param.VersionControl.dataToBackup;
+    if(String(initArray[0]).toLowerCase() === "all")
+        initArray = ["Actors", "Animations", "Armors", "Classes", "CommonEvents", "DataEX",
+                     "Enemies", "Items", "Notes", "Skills", "States", "System", "Tilesets", "Troops",
+                     "Weapons", "Windows"];
+    pathIn = decodeURIComponent(pathIn) + String(initArray[fileName] + ".json");
+    //console.log(fileName);
+
+    var fs = require('fs');
+    fs.readFile(pathIn, 'utf8', function parseData(err, data) {
+        if (err){
+            console.log(err);
+        } else {
+        obj = JSON.parse(data); //now it an object
+        json = JSON.stringify(obj); //convert it back to json
+        global.tj_damn_parseTjData(json);
+    }});
+}
+
+function readBackup(restore){
+    var initArray = TjKenMate.Param.VersionControl.dataToBackup;
+    if(String(initArray[0]).toLowerCase() === "all")
+        initArray = ["Actors", "Animations", "Armors", "Classes", "CommonEvents", "DataEX",
+                     "Enemies", "Items", "Notes", "Skills", "States", "System", "Tilesets", "Troops",
+                     "Weapons", "Windows"];
+    if(!restore) {
+        for(var i = 0; i < initArray.length; i++)
+            backUp(String(i));
+    }
+    if(restore) {
+        for(var i = 0; i < initArray.length; i++)
+            restoreBackUp(String(i));
+    }
+}
+
+function writeBackup(restore) {
+    var fs = require('fs');
+    if(!restore) {
+        for(var i = 0; i < global._Tj_JsonData.length; i++) {
+            //console.log(global._Tj_JsonData[i]);
+            var initArray = TjKenMate.Param.VersionControl.dataToBackup;
+            if(String(initArray[0]).toLowerCase() === "all")
+                initArray = ["Actors", "Animations", "Armors", "Classes", "CommonEvents", "DataEX",
+                             "Enemies", "Items", "Notes", "Skills", "States", "System", "Tilesets", "Troops",
+                             "Weapons", "Windows"];
+            var path = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/tjken/versioncontrol/');
+            if (path.match(/^\/([A-Z]\:)/)) {
+                path = path.slice(1);
+            }
+            path = decodeURIComponent(path) + initArray[i] + ".json";
+            fs.writeFile(path, global._Tj_JsonData, 'utf8', function(err) {
+                if(err) {
+                    return console.log(err);
+                }
+            });
+        }
+    }
+    if(restore) {
+        for(var i = 0; i < global._Tj_JsonData.length; i++) {
+            //console.log(global._Tj_JsonData[i]);
+            var initArray = TjKenMate.Param.VersionControl.dataToBackup;
+            if(String(initArray[0]).toLowerCase() === "all")
+                initArray = ["Actors", "Animations", "Armors", "Classes", "CommonEvents", "DataEX",
+                             "Enemies", "Items", "Notes", "Skills", "States", "System", "Tilesets", "Troops",
+                             "Weapons", "Windows"];
+            var path = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/data/');
+            if (path.match(/^\/([A-Z]\:)/)) {
+                path = path.slice(1);
+            }
+            path = decodeURIComponent(path) + initArray[i] + ".json";
+            fs.writeFile(path, global._Tj_JsonData, 'utf8', function(err) {
+                if(err) {
+                    return console.log(err);
+                }
+            });
+        }
+    }
+}
+
+function shouldBackup() {
+    var tj_config = TjKenMate.Param.VersionControl.backupSettings;
+    if(tj_config.b && TjKenMate.Param.VersionControl.BuildIncrease)
+        return true;
+    if(tj_config.ma && Tj_MajorVersionChange)
+        return true;
+    if(tj_config.mi && Tj_MinorVersionChange)
+        return true;
+    if(tj_config.r && Tj_ReleaseVersionChange)
+        return true;
+    return false;
+}
+
 var Tj_Version_Control_Scene_Boot_start = Scene_Boot.prototype.start;
 Scene_Boot.prototype.start = function() {
     Tj_BuildNumber = getBuildNumber();
-    console.log(TjKenMate.Param.VersionControl.BuildIncrease);
+    //console.log(TjKenMate.Param.VersionControl.BuildIncrease);
+    Tj_Version_Control_Scene_Boot_start.call(this);
     if(TjKenMate.Param.VersionControl.BuildIncrease)
         writeVersion();
-    Tj_Version_Control_Scene_Boot_start.call(this);
+    //console.log(TjKenMate.Param.VersionControl.restoreBackUp)
+    if(TjKenMate.Param.VersionControl.restoreBackUp) {
+        readBackup(true);
+    }
+    else if(shouldBackup()){
+        readBackup(false);
+    }
 }
 
 var Tj_Version_Control_Scene_Title_create = Scene_Title.prototype.create;
