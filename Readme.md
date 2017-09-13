@@ -8,9 +8,7 @@ The _following_ is a list of finished plugins and their required plugins and/or 
 This plugin requires no additonal plugins, just 2 aditonal directories.
 Install instructions present in the help section, mirrored here for convience
 
- ============================================================================
- Instructions
- ============================================================================
+ ## Instructions
  In your root directorty (aka where index.hml and the rpgmaker.project file is
  location), create a folder named tjken. Now create an addtional folder inside
  the tjken folder named versioncontrol. 
