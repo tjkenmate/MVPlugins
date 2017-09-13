@@ -1,6 +1,6 @@
 /*:
  * @plugindesc
- * [v1.0b] Simple Verison Control plugin. Track your Builds, Backup Your Database!
+ * [v1.1b] Simple Verison Control plugin. Track your versions! Backup Your database!
  * 
  * @author TJ (TjKenMate)
  *
@@ -26,8 +26,8 @@
  * 
  * @param Window Text
  * @desc The Text To Display in the Version window. Key Codes : %n New line %M Major %m Minor %R Release %b build
- * Default: %M.%m.$b
- * @default %M.%m.$b
+ * Default: %M.%m.%b
+ * @default %M.%m.%b
  * 
  * 
  * @param BuildIncrease
@@ -85,6 +85,12 @@
  * @desc A Space Seperated array of Jsons in /data/ to back up. use all to backup default data files. DO NOT INCLUDE THE .JSON. See Help
  * Default: all
  * @default all
+ * 
+ * 
+ * @param Json Suffix
+ * @desc Adds this string to the end of the file name. Key Codes : %M Major %m Minor %R Release %b build
+ * Default _%M_%m_%b
+ * @default _%M_%m_%b
  */
 
  //CodeCoexistance Stuff
@@ -115,6 +121,7 @@ TjKenMate.Param.VersionControl.wt = Number(TjKenMate.Parameters['Text Width']);
 TjKenMate.Param.VersionControl.restoreBackUp = eval(TjKenMate.Parameters['Restore Backup']) || false;
 TjKenMate.Param.VersionControl.backupSettings = createTjBackupConfig(String(TjKenMate.Parameters['Version Change to Backup']).split(" "))
 TjKenMate.Param.VersionControl.dataToBackup = String(TjKenMate.Parameters['Data To Backup']).split(" ") || [];
+TjKenMate.Param.VersionControl.jsonSuffix = String(TjKenMate.Parameters['Json Suffix']);
 
 var Tj_BuildNumber = 0;
 var Tj_MajorVersionChange = false;
@@ -250,9 +257,18 @@ function processString() {
     var replacedMajor = original.replace("%M", String(TjKenMate.Param.VersionControl.majorver));
     var replacedMinor = replacedMajor.replace("%m", String(TjKenMate.Param.VersionControl.minorver));
     var replacedRelease = replacedMinor.replace("%R", String(TjKenMate.Param.VersionControl.releasever));
-    var replacedBuild = replacedRelease.replace("$b", String(Tj_BuildNumber));
+    var replacedBuild = replacedRelease.replace("%b", String(Tj_BuildNumber));
     var replaceNewLine = replacedBuild.replace("%n", "\n");
     return replaceNewLine;
+}
+
+function processJsonSuffix() {
+    var original = TjKenMate.Param.VersionControl.jsonSuffix;
+    var replacedMajor = original.replace("%M", String(TjKenMate.Param.VersionControl.majorver));
+    var replacedMinor = replacedMajor.replace("%m", String(TjKenMate.Param.VersionControl.minorver));
+    var replacedRelease = replacedMinor.replace("%R", String(TjKenMate.Param.VersionControl.releasever));
+    var replacedBuild = replacedRelease.replace("%b", String(Tj_BuildNumber));
+    return replacedBuild;
 }
 
 function addTitleScreenVersion() {
@@ -338,8 +354,8 @@ function writeBackup(restore) {
             if (path.match(/^\/([A-Z]\:)/)) {
                 path = path.slice(1);
             }
-            path = decodeURIComponent(path) + initArray[i] + ".json";
-            fs.writeFile(path, global._Tj_JsonData, 'utf8', function(err) {
+            path = decodeURIComponent(path) + initArray[i] + processJsonSuffix() + ".json";
+            fs.writeFile(path, global._Tj_JsonData[i], 'utf8', function(err) {
                 if(err) {
                     return console.log(err);
                 }
@@ -358,7 +374,7 @@ function writeBackup(restore) {
             if (path.match(/^\/([A-Z]\:)/)) {
                 path = path.slice(1);
             }
-            path = decodeURIComponent(path) + initArray[i] + ".json";
+            path = decodeURIComponent(path) + initArray[i] + processJsonSuffix() + ".json";
             fs.writeFile(path, global._Tj_JsonData, 'utf8', function(err) {
                 if(err) {
                     return console.log(err);
