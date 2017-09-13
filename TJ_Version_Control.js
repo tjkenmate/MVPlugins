@@ -1,6 +1,6 @@
 /*:
  * @plugindesc
- * [v1.1b] Simple Verison Control plugin. Track your versions! Backup Your database!
+ * [v1.1b] Verison Control plugin. Track your versions! Backup Your database!
  * 
  * @author TJ (TjKenMate)
  *
@@ -29,12 +29,11 @@
  * Default: %M.%m.%b
  * @default %M.%m.%b
  * 
- * 
  * @param BuildIncrease
- * @desc Determines weather to increase the Build Version    JAVASCRPT EVAL
- * Default true
- * @default true
- * 
+ * @desc Determines weather to increase the Build Version JAVASCRPT EVAL
+ * (for somereason $gameTemp.isPlaytest() doesnt work, use Utils.isOptionValid('test') instead)
+ * Default Utils.isOptionValid('test')
+ * @default Utils.isOptionValid('test')
  * 
  * @param ~~ TitleScrenBox ~~
  * @desc Title Screen Settings
@@ -68,8 +67,8 @@
  * 
  * @param Text Width
  * @desc Text Width in the box
- * Default: 28
- * @default 28
+ * Default: 100
+ * @default 100
  * 
  * @param ~~ Backup ~~
  * @desc Backup Settings
@@ -78,8 +77,8 @@
  * 
  * @param Version Change to Backup
  * @desc A Space Seperated array of Version Changes to back up. See Help
- * Default: Major Minor Release
- * @default Major Minor Release
+ * Default: Major Minor Release Build
+ * @default Major Minor Release Build
  *
  * @param Data To Backup
  * @desc A Space Seperated array of Jsons in /data/ to back up. use all to backup default data files. DO NOT INCLUDE THE .JSON. See Help
@@ -91,6 +90,80 @@
  * @desc Adds this string to the end of the file name. Key Codes : %M Major %m Minor %R Release %b build
  * Default _%M_%m_%b
  * @default _%M_%m_%b
+ * 
+ * @help
+ * 
+ * Version Control
+ * TjKenMate
+ * Version 1.1 Beta
+ * 
+ * ============================================================================
+ * Introduction
+ * ============================================================================
+ * 
+ * A Simple Version Control Plugin Aimed to do two things.
+ * 
+ * 1. A Creates a simple Version System which has incremental builds based on 
+ *    when the user launches the game in playtesting modes. 
+ *    It also stores the version number in a file, and displays the version 
+ *    number customizably on the title screen (if enabled)
+ * 
+ * 2. Uses this Version System to create incremental backups of the entries in 
+ *    the Database in a seperate folder by version.
+ * 
+ * However this system is aimed to be fully customizable and while the default 
+ * implementation (other than the title screen box) I find to be the best settings
+ * it is upto you to customize and change it as you see fit.
+ * 
+ * ============================================================================
+ * Instructions
+ * ============================================================================
+ * 
+ * In your root directorty (aka where index.hml and the rpgmaker.project file is
+ * location), create a folder named tjken. Now create an addtional folder inside
+ * the tjken folder named versioncontrol. 
+ * 
+ * This is where the backups and the version file will be stored
+ * 
+ * Set up the paramaters as you see fit, and thats it!
+ * 
+ * ============================================================================
+ * Paramater Notes
+ * ============================================================================
+ * 
+ * DO NOT USE $gameTemp.isPlaytest() as it doesnt work if you try to use it
+ * the game may crash, please use Utils.isOptionValid('test') instead.
+ * I have it set up to catch if you put it in by accedent, BUT NO GARENTEES
+ * YOU HAVE BEEN WARNED AND WILL GET 0 SUPPORT FROM ME.
+ * 
+ * ANYTHING MARKED WITH SPACE SEPERATED ARRAY MUST BE INTPUTED LIKE SO
+ * - "x y z" (without qoutes)
+ * 
+ * SINGLE SPACE ONLY
+ * 
+ * The following wont work
+ * - "x, y, z"
+ * - "x,y,z"
+ * - ect
+ * 
+ * As for the options for data backup, any .json file present in /data folder
+ * can be backed up. Example:
+ * - "Actors Animations Weapons" (without qoutes)
+ * 
+ * if you input "all" (without qoutes) will back up the folowing .json
+ * Actors Animations Armors Classes CommonEvents DataEX Enemies Items Notes
+ * Skills States System Tilesets Troops Weapons Windows
+ * 
+ * NOTE IF YOU USE "ALL" IT WILL OVERRIDE YOUR INPUT
+ * 
+ * ============================================================================
+ * Changelog
+ * ============================================================================
+ * 
+ * Version [1.1b]:
+ * - Inital Release!
+ * 
+ * ============================================================================
  */
 
  //CodeCoexistance Stuff
@@ -111,7 +184,7 @@ TjKenMate.Param.VersionControl.majorver = Number(TjKenMate.Parameters['Major Ver
 TjKenMate.Param.VersionControl.minorver = Number(TjKenMate.Parameters['Minor Version']);
 TjKenMate.Param.VersionControl.releasever = Number(TjKenMate.Parameters['Release Version']);
 TjKenMate.Param.VersionControl.stringFormat = String(TjKenMate.Parameters['Window Text']);
-TjKenMate.Param.VersionControl.BuildIncrease = eval(TjKenMate.Parameters['BuildIncrease']); 
+TjKenMate.Param.VersionControl.BuildIncrease = playtesting(String(TjKenMate.Parameters['BuildIncrease'])); 
 TjKenMate.Param.VersionControl.show = eval(TjKenMate.Parameters['Show Version Window']); 
 TjKenMate.Param.VersionControl.xw = Number(TjKenMate.Parameters['x']);
 TjKenMate.Param.VersionControl.yw = Number(TjKenMate.Parameters['y']);
@@ -123,13 +196,22 @@ TjKenMate.Param.VersionControl.backupSettings = createTjBackupConfig(String(TjKe
 TjKenMate.Param.VersionControl.dataToBackup = String(TjKenMate.Parameters['Data To Backup']).split(" ") || [];
 TjKenMate.Param.VersionControl.jsonSuffix = String(TjKenMate.Parameters['Json Suffix']);
 
+var TJ_FirstRun = false;
+
 var Tj_BuildNumber = 0;
 var Tj_MajorVersionChange = false;
 var Tj_MinorVersionChange = false;
 var Tj_ReleaseVersionChange = false;
 global._Tj_JsonData = [];
-global._Tj_JsonDataCounter = 0;
 global._Tj_ShouldBackup = TjKenMate.Param.VersionControl.restoreBackUp;
+global._Tj_JsonDataCounter = 0;
+
+function playtesting(string) {
+    if(string === '$gameTemp.isPlaytest()')
+        return Utils.isOptionValid('test');
+    else
+        return eval(string);
+}
 
 function createTjBackupConfig(array) {
     var major = false;
@@ -155,23 +237,22 @@ function createTjBackupConfig(array) {
 	return config;
 }
 
-global.tj_damn_parseTjData = function(data) {
+global.tj_damn_parseTjData = function(data, number) {
     jsonObject = data;
     //console.log(jsonObject);
     //console.log("I am called");
-    global._Tj_JsonData[global._Tj_JsonDataCounter] = jsonObject;
+    global._Tj_JsonData[number] = jsonObject;
     //console.log(global._Tj_JsonData[global._Tj_JsonDataCounter]);
     global._Tj_JsonDataCounter = global._Tj_JsonDataCounter + 1;
-    writeBackup(false);
 }
 
 global.tj_damn_parseTjDataRestore = function(data) {
     jsonObject = data;
     //console.log(jsonObject);
     //console.log("I am called");
-    global._Tj_JsonData[global._Tj_JsonDataCounter] = jsonObject;
+    //global._Tj_JsonData[global._Tj_JsonDataCounter] = jsonObject;
     //console.log(global._Tj_JsonData[global._Tj_JsonDataCounter]);
-    global._Tj_JsonDataCounter = global._Tj_JsonDataCounter + 1;
+    //global._Tj_JsonDataCounter = global._Tj_JsonDataCounter + 1;
     writeBackup(true);
 }
 
@@ -289,14 +370,14 @@ function backUp(fileName) {
     //console.log(fileName);
 
     var fs = require('fs');
-    fs.readFile(pathIn, 'utf8', function parseData(err, data) {
+    var json = fs.readFileSync(pathIn);
+    global.tj_damn_parseTjData(json, Number(fileName)); `{
         if (err){
             console.log(err);
         } else {
         obj = JSON.parse(data); //now it an object
         json = JSON.stringify(obj); //convert it back to json
-        global.tj_damn_parseTjData(json);
-    }});
+    }});`
 }
 
 
@@ -399,22 +480,27 @@ function shouldBackup() {
 
 var Tj_Version_Control_Scene_Boot_start = Scene_Boot.prototype.start;
 Scene_Boot.prototype.start = function() {
-    Tj_BuildNumber = getBuildNumber();
-    //console.log(TjKenMate.Param.VersionControl.BuildIncrease);
     Tj_Version_Control_Scene_Boot_start.call(this);
-    if(TjKenMate.Param.VersionControl.BuildIncrease)
-        writeVersion();
-    //console.log(TjKenMate.Param.VersionControl.restoreBackUp)
-    if(TjKenMate.Param.VersionControl.restoreBackUp) {
-        readBackup(true);
-    }
-    else if(shouldBackup()){
-        readBackup(false);
-    }
+    TJ_FirstRun = true;
 }
 
 var Tj_Version_Control_Scene_Title_create = Scene_Title.prototype.create;
 Scene_Title.prototype.create = function() {
+    if(TJ_FirstRun) {
+        Tj_BuildNumber = getBuildNumber();
+        if(TjKenMate.Param.VersionControl.BuildIncrease)
+            writeVersion();
+        if(shouldBackup()) {
+            writeBackup(false);
+        }
+        if(TjKenMate.Param.VersionControl.restoreBackUp) {
+            readBackup(true);
+        }
+        else if(shouldBackup()){
+            readBackup(false);
+        }
+        TJ_FirstRun = false;
+    }
     Tj_Version_Control_Scene_Title_create.call(this);
     if (TjKenMate.Param.VersionControl.show) {
         var window = new Window_Base(TjKenMate.Param.VersionControl.xw, TjKenMate.Param.VersionControl.yw, TjKenMate.Param.VersionControl.ww, TjKenMate.Param.VersionControl.hw);
