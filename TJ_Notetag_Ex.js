@@ -1,40 +1,51 @@
 function compileDefines(aString){
     returnString = String(aString);
-    var defineRegix = /(#def|#define)\s+((\w+|".*"))\s(.*$|".*")\s*/i
-    var defineAllRegix = /(#defall|#defineall)\s+((\w+|".*"))\s(.*$|".*")\s*/i
-    var defineBetweenRegix = /(#defbet|#definebetween)\s+((\w+|".*"))\s(.*$|".*")\s*/i
+    var defineRegix = /^\s?(#def|#define)\s+(\S+)\s(([\S\s]*$))/i;
+    var defineRegixEATALL = /^\s?(#def|#define)\s+(\S+)\s(([\S\s]*$)).*/i
+    var defineAllRegix = /^\s?(#defall|#defineall)\\s+(\S+)\s(([\S\s]*$))/i;
+    var defineAllRegixEATALL = /^\s?(#defall|#defineall)\\s+(\S+)\s(([\S\s]*$)).*/i;
+    var defineBetweenRegix = /^\s?(#defbet|#definebetween)\s+(\S+)\s+(([\S\s]*$))/i;
+    var defineBetweenRegixEATALL = /^\s?(#defbet|#definebetween)\s+(\S+)\s+(([\S\s]*$)).*/i;;
     var tempRegix = new RegExp("");
     var voidRegix = new RegExp("");
     var caps;
     var array;
+    console.log(returnString);
+    console.log(defineRegix.test(returnString));
     do{
         while(defineRegix.test(returnString)){
-            array = returnString.replace(defineRegix, returnDefineArray);
-            tempRegix = new RegExp(String("(^\s?)"+array[0]+"(\s?$)"), "g");
-            caps = returnString.replace(tempRegix, returnDefineArray)
+            console.log(returnString);
+            array = returnString.replace(defineRegixEATALL, returnDefineArray);
+            tempRegix = new RegExp(String("(^\s?)"+array[0].trim()+"(\s?$)"), "g");
+            console.log(array);
+            console.log(tempRegix);
+            caps = returnString.replace(tempRegix, returnDefineArray);
+            console.log(caps);
             returnString = returnString.replace(tempRegix, caps[0] + array[1] + caps[1]);
+            console.log(returnString);
             returnString = returnString.replace(defineRegix, "");
             tempRegix = voidRegix;
         }
         while(defineAllRegix.test(returnString)){
-            array = returnString.replace(defineAllRegix, returnDefineArray);
-            tempRegix = new RegExp(String(array[0]), "g");
+            array = returnString.replace(defineAllRegixEATALL, returnDefineArray);
+            tempRegix = new RegExp(String(array[0].trim()), "g");
             returnString = returnString.replace(tempRegix, array[1]);
             returnString = returnString.replace(defineAllRegix, "");
             tempRegix = voidRegix;
         }
         while(defineBetweenRegix.test(returnString)){
-            array = returnString.replace(defineBetweenRegix, returnDefineArray);
-            tempRegix = new RegExp(String("((\{|\}|\[|\]|\(|\)|\s|,|<|>))"+ array[0] +"((\{|\}|\[|\]|\(|\)|\s|,|<|>))"), "g");
+            array = returnString.replace(defineBetweenRegixEATALL, returnDefineArray);
+            tempRegix = new RegExp(String("((\{|\}|\[|\]|\(|\)|\s|,|<|>))"+ array[0].trim() +"((\{|\}|\[|\]|\(|\)|\s|,|<|>))"), "g");
             caps = returnString.replace(tempRegix, returnDefineArray)
             returnString = returnString.replace(tempRegix, caps[0] + array[1] + caps[1]);
             returnString = returnString.replace(defineBetweenRegix, "");
             tempRegix = voidRegix;
         }
     } while(defineRegix.test(returnString)|| defineAllRegix.test(returnString) || defineBetweenRegix.test(returnString) || false);
+    return returnString;
 }
 
-function returnDefineArray(notNeeded, input, output) {
+function returnDefineArray(notNeeded, notInput, input, output) {
     var input2 = String(input).replace(/^"?(.*)?"$/, "$1");
     var output2 = String(output).replace(/^"?(.*)?"$/, "$1");
     return [input, output];
@@ -85,6 +96,6 @@ var Tj_NoteTagEX_Scene_Boot = Scene_Boot.prototype.start;
 Scene_Boot.prototype.start = function() {
     Tj_NoteTagEX_Scene_Boot.call(this);
     console.log(replaceImports("test", "test", ""));
-    compileImports(replaceImports("test", "test", ""));
+    console.log(compileDefines(compileImports(replaceImports("test", "test", ""))));
 }
 //console.log(hash(aString));
