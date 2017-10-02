@@ -1,62 +1,40 @@
+var Imported = Imported || {};
+Imported.TjKenMate_NoteTagEX = true;
+
+var TjKenMate = TjKenMate || {};
+TjKenMate.NoteTagEx = TjKenMate.NoteTagEx || {};
+
+function regExpEscape(s) {
+    return String(s).replace(/([-()\[\]{}+?*.$\^|,:#<!\\])/g, '\\$1').
+        replace(/\x08/g, '\\x08');
+};
+
 function compileDefines(aString){
     returnString = String(aString);
-    var defineRegix = /^\s?(#def|#define)\s+(\S+)\s(([\S\s]*$))/i;
-    var defineRegixEATALL = /^\s?(#def|#define)\s+(\S+)\s(([\S\s]*$)).*/i
-    var defineAllRegix = /^\s?(#defall|#defineall)\\s+(\S+)\s(([\S\s]*$))/i;
-    var defineAllRegixEATALL = /^\s?(#defall|#defineall)\\s+(\S+)\s(([\S\s]*$)).*/i;
-    var defineBetweenRegix = /^\s?(#defbet|#definebetween)\s+(\S+)\s+(([\S\s]*$))/i;
-    var defineBetweenRegixEATALL = /^\s?(#defbet|#definebetween)\s+(\S+)\s+(([\S\s]*$)).*/i;;
-    var tempRegix = new RegExp("");
-    var voidRegix = new RegExp("");
-    var caps;
-    var array;
-    console.log(returnString);
-    console.log(defineRegix.test(returnString));
+    var defineRegix = /\s?(#def|#define)\s+(\S+)\s+([^\n]*)/i;
+    var defineAllRegix = /\s?(#defall|#defineall)\s+(\S+)\s+([^\n]*)/i;
     do{
-        while(defineRegix.test(returnString)){
-            console.log(returnString);
-            array = returnString.replace(defineRegixEATALL, returnDefineArray);
-            tempRegix = new RegExp(String("(^\s?)"+array[0].trim()+"(\s?$)"), "g");
-            console.log(array);
-            console.log(tempRegix);
-            caps = returnString.replace(tempRegix, returnDefineArray);
-            console.log(caps);
-            returnString = returnString.replace(tempRegix, caps[0] + array[1] + caps[1]);
-            console.log(returnString);
-            returnString = returnString.replace(defineRegix, "");
-            tempRegix = voidRegix;
+        while(defineRegix.test(returnString)) {
+            var match = returnString.match(defineRegix);
+            returnString = returnString.replace(new RegExp(regExpEscape(match[0])+"\\n?"), "");
+            returnString = returnString.replace(new RegExp("\\b"+regExpEscape(match[2])+"\\b", "g"), match[3]);
         }
-        while(defineAllRegix.test(returnString)){
-            array = returnString.replace(defineAllRegixEATALL, returnDefineArray);
-            tempRegix = new RegExp(String(array[0].trim()), "g");
-            returnString = returnString.replace(tempRegix, array[1]);
-            returnString = returnString.replace(defineAllRegix, "");
-            tempRegix = voidRegix;
+        while(defineAllRegix.test(returnString)) {
+            var match = returnString.match(defineAllRegix);
+            returnString = returnString.replace(new RegExp(regExpEscape(match[0])+"\\n?"), "");
+            returnString = returnString.replace(new RegExp(regExpEscape(match[2]), "g"), match[3]);
         }
-        while(defineBetweenRegix.test(returnString)){
-            array = returnString.replace(defineBetweenRegixEATALL, returnDefineArray);
-            tempRegix = new RegExp(String("((\{|\}|\[|\]|\(|\)|\s|,|<|>))"+ array[0].trim() +"((\{|\}|\[|\]|\(|\)|\s|,|<|>))"), "g");
-            caps = returnString.replace(tempRegix, returnDefineArray)
-            returnString = returnString.replace(tempRegix, caps[0] + array[1] + caps[1]);
-            returnString = returnString.replace(defineBetweenRegix, "");
-            tempRegix = voidRegix;
-        }
-    } while(defineRegix.test(returnString)|| defineAllRegix.test(returnString) || defineBetweenRegix.test(returnString) || false);
+    } while(defineRegix.test(returnString) || defineAllRegix.test(returnString) || false);
     return returnString;
 }
 
-function returnDefineArray(notNeeded, notInput, input, output) {
-    var input2 = String(input).replace(/^"?(.*)?"$/, "$1");
-    var output2 = String(output).replace(/^"?(.*)?"$/, "$1");
-    return [input, output];
-}
+
 
 function compileImports(aString){
     returnString = String(aString);
     var importRegex = /#import\s+((\w+|".*"))/i;
     while(importRegex.test(returnString)){
         returnString = returnString.replace(importRegex, replaceImports);
-        console.log(returnString);
     }
     return returnString;
 }
@@ -78,6 +56,20 @@ function replaceImports(notNeeded, match) {
     return fileContent;
 }
 
+function tjNoteTagloadFile(filename) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET","tjken/notetagex/" + filename, false);
+    try {
+        xhr.send(null);
+    }
+    catch (err) {
+        console.log(err);
+        return "";
+    } 
+    var fileContent = xhr.responseText;
+    return fileContent;
+}
+
 function tjDJB2Hash(str) {
   var hash = 5381,
       i    = str.length;
@@ -85,17 +77,114 @@ function tjDJB2Hash(str) {
   while(i) {
     hash = (hash * 33) ^ str.charCodeAt(--i);
   }
+  return hash >>> 0;
+}
 
-  /* JavaScript does bitwise operations (like XOR, above) on 32-bit signed
-   * integers. Since we want the results to be always positive, convert the
-   * signed int to an unsigned by doing an unsigned bitshift. */
-  return hash;
+function TjmakeDirectory(SubDirctory) {
+    var fs = require('fs');
+    var path = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/tjken/');
+    if (path.match(/^\/([A-Z]\:)/)) {
+        path = path.slice(1);
+    }
+    path = decodeURIComponent(path)
+    if(!fs.existsSync(path)) {
+        fs.mkdirSync(path);
+    }
+    path = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/tjken/'+SubDirctory);
+    if (path.match(/^\/([A-Z]\:)/)) {
+        path = path.slice(1);
+    }
+    path = decodeURIComponent(path);
+    if(!fs.existsSync(path)) {
+        fs.mkdirSync(path);
+        return true;
+    }
+    return false;
+}
+
+function makeHashFile(info){
+    var fs = require('fs');
+    var path = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/tjken/notetagex/');
+    if (path.match(/^\/([A-Z]\:)/)) {
+          path = path.slice(1);
+    }
+    path = decodeURIComponent(path);
+    path = path + "hash.rmvnmh";
+    fs.writeFileSync(path,info);
+}
+
+function writeCompiledFile(info, name){
+    var fs = require('fs');
+    var path = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/data/notetagex/');
+    if (path.match(/^\/([A-Z]\:)/)) {
+          path = path.slice(1);
+    }
+    path = decodeURIComponent(path);
+    path = path + name;
+    fs.writeFileSync(path,info);
+}
+
+function TjmakeNoteTagDataDirectory() {
+    var fs = require('fs');
+    var path = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/data/notetagex/');
+    if (path.match(/^\/([A-Z]\:)/)) {
+        path = path.slice(1);
+    }
+    path = decodeURIComponent(path)
+    if(!fs.existsSync(path)) {
+        fs.mkdirSync(path);
+    }
+}
+
+
+function tjCompileNoteTags(){
+    var fs = require('fs');
+    var path = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/tjken/notetagex/');
+    if (path.match(/^\/([A-Z]\:)/)) {
+          path = path.slice(1);
+    }
+    path = decodeURIComponent(path);
+    var fileArray = fs.readdirSync(path);
+    var hasher = tjNoteTagloadFile("hash.rmvnmh");
+    var tempArray = [""];
+    var resetupDatafolder = false;
+    for(var i = 0; i < fileArray.length; i++){
+        if(fileArray[i].match(/.*\.rmvns/)){
+            var notetag = tjNoteTagloadFile(fileArray[i]);
+            var hash = tjDJB2Hash(notetag);
+            if(tempArray = hasher.match(new RegExp(regExpEscape(fileArray[i])+":\\s(\\d*)"))) {
+                if(Number(tempArray[1]) != hash) {
+                    notetag = compileDefines(compileImports(notetag));
+                    writeCompiledFile(notetag, fileArray[i].replace(".rmvns",".rmvn"));
+                    resetupDatafolder = true;
+                    hasher = hasher.replace(tempArray[0], fileArray[i]+": " + hash);
+                }
+            } else {
+                notetag = compileDefines(compileImports(notetag));
+                writeCompiledFile(notetag, fileArray[i].replace(".rmvns",".rmvn"));
+                resetupDatafolder = true;
+                hasher = hasher + "  " + fileArray[i]+": " + hash;
+            }
+        }
+    }
+    if(resetupDatafolder){
+        makeHashFile(hasher);
+        path = window.location.pathname.replace(/(\/www|)\/[^\/]*$/, '/data/notetagex/');
+        if (path.match(/^\/([A-Z]\:)/)) {
+              path = path.slice(1);
+        }
+        path = decodeURIComponent(path);
+        fileArray = fs.readdirSync(path);
+        writeCompiledFile(fileArray, "master.rmv");
+    }
 }
 
 var Tj_NoteTagEX_Scene_Boot = Scene_Boot.prototype.start;
 Scene_Boot.prototype.start = function() {
     Tj_NoteTagEX_Scene_Boot.call(this);
-    console.log(replaceImports("test", "test", ""));
-    console.log(compileDefines(compileImports(replaceImports("test", "test", ""))));
+    if(Utils.isOptionValid('test')){
+        TjmakeNoteTagDataDirectory()
+        if(TjmakeDirectory('notetagex')) {makeHashFile("Ouchie_Ouch___DO_NOT_TOUCH_OR_YOU_MAY_BREAK_THE_FILE______________   ");}
+        tjCompileNoteTags();
+    }
 }
-//console.log(hash(aString));
